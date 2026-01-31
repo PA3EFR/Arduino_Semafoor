@@ -1,0 +1,234 @@
+// ================= PINNEN =================
+const int ledPins[7] = {2, 3, 4, 5, 6, 7, 8};
+const int modeSwitchPin = 9;   // LOW = tekst, HIGH = random
+const int nextButtonPin = 10;
+
+// ================= TIMING =================
+const unsigned long debounceTime = 30;
+
+// ================= LETTER-ALFABET =================
+const bool letters[][7] = {
+  {1,0,0,0,0,0,0}, // A
+  {0,1,0,0,0,0,0}, // B
+  {0,0,1,0,0,0,0}, // C
+  {0,0,0,1,0,0,0}, // D
+  {0,0,0,0,1,0,0}, // E
+  {0,0,0,0,0,1,0}, // F
+  {0,0,0,0,0,0,1}, // G
+  {1,1,0,0,0,0,0}, // H
+  {1,0,1,0,0,0,0}, // I
+  {0,0,0,1,0,1,0}, // J
+  {1,0,0,1,0,0,0}, // K
+  {1,0,0,0,1,0,0}, // L
+  {1,0,0,0,0,1,0}, // M
+  {1,0,0,0,0,0,1}, // N
+  {0,1,1,0,0,0,0}, // O
+  {0,1,0,1,0,0,0}, // P
+  {0,1,0,0,1,0,0}, // Q
+  {0,1,0,0,0,1,0}, // R
+  {0,1,0,0,0,0,1}, // S
+  {0,0,1,1,0,0,0}, // T
+  {0,0,1,0,1,0,0}, // U
+  {0,0,0,1,0,0,1}, // V
+  {0,0,0,0,1,1,0}, // W
+  {0,0,0,0,1,0,1}, // X
+  {0,0,1,0,0,1,0}, // Y
+  {0,0,0,0,0,1,1}, // Z
+};
+
+const int numLetters = 26;
+
+// ================= CIJFERS =================
+const bool startDigits[7] = {0,0,0,1,1,0,0};
+const bool endDigits[7]   = {0,0,0,1,0,1,0};
+
+const int digitMap[10] = {
+  10, 0, 1, 2, 3, 4, 5, 6, 7, 8
+};
+
+// ================= TEKST =================
+const char text[] = "the quick brown fox 123 jumps over 45 lazy dog";
+int textIndex = 0;
+
+// ================= INTRO =================
+const char introSeq[] = "rudurudur";
+const int introLength = 8;
+const unsigned long introDuration = 2000;
+
+// ================= TESTMODUS =================
+const char testSeq[] = "nrudurnabcdefgfedcbadndrdudrdn";
+const unsigned long testStepTime = 350;
+const unsigned long testAllOnTime = 750;
+
+// ================= STATUS =================
+bool lastNextButtonState = HIGH;
+unsigned long lastNextChangeTime = 0;
+bool lastModeState = HIGH;
+bool inDigitMode = false;
+
+enum TextState { INTRO, TEXT, OUTRO, DONE };
+TextState textState = INTRO;
+
+// ================= SETUP =================
+void setup() {
+  for (int i = 0; i < 7; i++) pinMode(ledPins[i], OUTPUT);
+  pinMode(modeSwitchPin, INPUT_PULLUP);
+  pinMode(nextButtonPin, INPUT_PULLUP);
+  randomSeed(analogRead(A0));
+
+  playTestMode();   // 👈 testmodus bij opstart
+}
+
+// ================= LOOP =================
+void loop() {
+  checkModeChange();
+  handleNextButton();
+}
+
+// ================= TESTMODUS =================
+void playTestMode() {
+  for (int i = 0; testSeq[i] != '\0'; i++) {
+    char c = testSeq[i];
+    if (c >= 'a' && c <= 'z') {
+      showLetter(c - 'a');
+    }
+    delay(testStepTime);
+  }
+
+  // Alle LEDs aan
+  for (int i = 0; i < 7; i++) digitalWrite(ledPins[i], HIGH);
+  delay(testAllOnTime);
+  clearLeds();
+}
+
+// ================= MODUSWISSEL =================
+void checkModeChange() {
+  bool m = digitalRead(modeSwitchPin);
+  if (m != lastModeState) {
+    lastModeState = m;
+    resetTextMode();
+    clearLeds();
+    delay(50);
+  }
+}
+
+// ================= KNOP =================
+void handleNextButton() {
+  bool r = digitalRead(nextButtonPin);
+  unsigned long now = millis();
+
+  if (r != lastNextButtonState) {
+    lastNextChangeTime = now;
+    lastNextButtonState = r;
+  }
+
+  if ((now - lastNextChangeTime) > debounceTime && r == LOW) {
+    if (digitalRead(modeSwitchPin) == HIGH) {
+      randomStep();
+    } else {
+      advanceTextMode();
+    }
+    while (digitalRead(nextButtonPin) == LOW) {}
+  }
+}
+
+// ================= RANDOM =================
+void randomStep() {
+  if (random(2)) {
+    playRandomDigit(random(10));
+  } else {
+    showLetter(random(numLetters));
+  }
+}
+
+void playRandomDigit(int d) {
+  showPattern(startDigits);
+  delay(500);
+  showLetter(digitMap[d]);
+  delay(1000);
+  showPattern(endDigits);
+  delay(500);
+  clearLeds();
+}
+
+// ================= TEKST =================
+void advanceTextMode() {
+  switch (textState) {
+    case INTRO: playIntro(); textState = TEXT; break;
+    case TEXT: showNextTextChar(); break;
+    case OUTRO: playIntro(); textState = DONE; break;
+    case DONE: resetTextMode(); break;
+  }
+}
+
+void showNextTextChar() {
+  char c = text[textIndex++];
+
+  if (c == '\0') {
+    if (inDigitMode) {
+      showPattern(endDigits);
+      inDigitMode = false;
+      return;
+    }
+    textState = OUTRO;
+    return;
+  }
+
+  if (c >= '0' && c <= '9') {
+    if (!inDigitMode) {
+      showPattern(startDigits);
+      inDigitMode = true;
+      textIndex--;
+      return;
+    }
+    showLetter(digitMap[c - '0']);
+    return;
+  }
+
+  if (inDigitMode) {
+    showPattern(endDigits);
+    inDigitMode = false;
+    textIndex--;
+    return;
+  }
+
+  if (c == ' ') {
+    clearLeds();
+    return;
+  }
+
+  if (c >= 'a' && c <= 'z') {
+    showLetter(c - 'a');
+  }
+}
+
+// ================= HELPERS =================
+void playIntro() {
+  unsigned long step = introDuration / introLength;
+  for (int i = 0; i < introLength; i++) {
+    showLetter(introSeq[i] - 'a');
+    delay(step);
+  }
+  clearLeds();
+}
+
+void showLetter(int i) {
+  for (int l = 0; l < 7; l++)
+    digitalWrite(ledPins[l], letters[i][l]);
+}
+
+void showPattern(const bool p[7]) {
+  for (int i = 0; i < 7; i++)
+    digitalWrite(ledPins[i], p[i]);
+}
+
+void clearLeds() {
+  for (int i = 0; i < 7; i++)
+    digitalWrite(ledPins[i], LOW);
+}
+
+void resetTextMode() {
+  textIndex = 0;
+  textState = INTRO;
+  inDigitMode = false;
+}
