@@ -143,11 +143,11 @@ void randomStep() {
 
 void playRandomDigit(int d) {
   showPattern(startDigits);
-  delay(500);
+  delay(1500);
   showLetter(digitMap[d]);
-  delay(1000);
+  delay(2000);
   showPattern(endDigits);
-  delay(500);
+  delay(1500);
   clearLeds();
 }
 
@@ -232,3 +232,4 @@ void resetTextMode() {
   textState = INTRO;
   inDigitMode = false;
 }
+
