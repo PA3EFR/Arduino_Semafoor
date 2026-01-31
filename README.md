@@ -144,21 +144,15 @@ You can easily modify:
 const char text[] = "your text here";
 Timing values
 Startup test timing
-
 Intro/outro duration
-
 Digit signalling duration
-
 Alphabet mapping
 Adjust the letters[][7] table to match your own semaphore layout.
 
 Design Notes
 The system uses blocking timing (delay) for clarity and predictability
-
 State machines are used to manage text flow and digit groups
-
 Random and text modes are fully independent
-
 Startup test cannot be interrupted
 
 Possible Extensions
@@ -171,3 +165,4 @@ External semaphore arms instead of LEDs
 License
 This project is intended for educational and experimental use.
 Use, modify, and share freely.
+Have fun, Erwin PA3EFR
