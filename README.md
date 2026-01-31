@@ -105,7 +105,7 @@ Numbers are handled as **groups** and are clearly marked.
 | 9 | I |
 
 Example:
-"wlkom bij 2026"
+"welcome to JOTA 2026"
 
 Results in:
 Start digits → 2 → 0 → 2 → 6 → End digits
