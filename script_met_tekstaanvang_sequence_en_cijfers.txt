@@ -46,8 +46,8 @@ const bool endDigits[7]   = {0,0,0,1,0,1,0};
 const int digitMap[10]    = {10,0,1,2,3,4,5,6,7,8};
 
 // ---------------- TESTSEQUENTIE ----------------
-const char testSeq[] = "nrudurnabcdefgfedcbadndrdudrdn";
-const unsigned long testStepTime = 350;
+const char testSeq[] = "abcdefgfedcbanrudurngfedcbabcdefgnrudurn";
+const unsigned long testStepTime = 80;
 
 // ---------------- STATUS ----------------
 bool lastButtonState = HIGH;
