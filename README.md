@@ -1,5 +1,7 @@
 # Semaphore Alphabet Trainer (Arduino)
 
+Every so often the Plusscouts PA3EFR/J produce some JOTA related solder projects and/or software design. 
+
 This project is an Arduino-based semaphore alphabet trainer using LEDs and push buttons.  
 It supports **manual step-by-step signalling**, **random training**, **numeric signalling**, and an **automatic power-on self test**.
 
