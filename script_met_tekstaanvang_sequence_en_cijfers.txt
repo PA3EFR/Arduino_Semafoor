@@ -1,24 +1,32 @@
-// ================= PINNEN =================
-const int ledPins[7] = {3, 5, 7, 8, 6, 4, 2};
-const int modeSwitchPin = 13;
-const int nextButtonPin = 10;
+// ======================================================
+// Semaphore Alphabet Trainer – complete stabiele versie
+// ======================================================
 
-// ================= TIMING =================
+// ---------------- PINNEN ----------------
+const int ledPins[7] = {3, 5, 7, 8, 6, 4, 2};
+const int modeSwitchPin = 12;   // LOW = tekst, HIGH = random
+const int nextButtonPin = 10;   // stappenschakelaar
+
+// ---------------- TIMING ----------------
 const unsigned long debounceTime = 50;
 const unsigned long idleTimeout  = 15000;
 
-// ================= RANDOM BALANS =================
+// ---------------- RANDOM BALANS ----------------
 const int randomLettersWeight = 20;
 const int randomDigitsWeight  = 2;
 
-// ================= CIJFER COOLDOWN =================
+// ---------------- TEKST ----------------
+const char textMessage[] = "pa3efr ";
+int textIndex = 0;
+
+// ---------------- CIJFER COOLDOWN ----------------
 int lettersUntilNextDigit = 0;
 
-// ================= LAATSTE TEKEN (NIEUW) =================
+// ---------------- LAATSTE TEKEN ----------------
 bool lastWasDigit = false;
-int lastSymbolIndex = -1;   // letter-index of cijfer (0–9)
+int lastSymbolIndex = -1;
 
-// ================= LETTERS =================
+// ---------------- LETTERS ----------------
 const bool letters[][7] = {
   {1,0,0,0,0,0,0},{0,1,0,0,0,0,0},{0,0,1,0,0,0,0},
   {0,0,0,1,0,0,0},{0,0,0,0,1,0,0},{0,0,0,0,0,1,0},
@@ -32,71 +40,78 @@ const bool letters[][7] = {
 };
 const int numLetters = 26;
 
-// ================= CIJFERS =================
+// ---------------- CIJFERS ----------------
 const bool startDigits[7] = {0,0,0,1,1,0,0};
 const bool endDigits[7]   = {0,0,0,1,0,1,0};
-const int digitMap[10] = {10,0,1,2,3,4,5,6,7,8};
+const int digitMap[10]    = {10,0,1,2,3,4,5,6,7,8};
 
-// ================= TESTSEQUENTIE =================
+// ---------------- TESTSEQUENTIE ----------------
 const char testSeq[] = "nrudurnabcdefgfedcbadndrdudrdn";
 const unsigned long testStepTime = 350;
 
-// ================= STATUS =================
-bool lastNextButtonState = HIGH;
-unsigned long lastNextChangeTime = 0;
+// ---------------- STATUS ----------------
+bool lastButtonState = HIGH;
+unsigned long lastButtonChange = 0;
 bool buttonHandled = false;
 
 unsigned long lastUserActionTime = 0;
 
-bool inTestMode = false;
+bool inTestMode = true;
 bool repeatTest = false;
 bool startupTestDone = false;
 
 int testIndex = 0;
 unsigned long lastTestStepTime = 0;
 
-// ================= SETUP =================
+// ======================================================
+// SETUP
+// ======================================================
 void setup() {
   for (int i = 0; i < 7; i++) pinMode(ledPins[i], OUTPUT);
+
   pinMode(modeSwitchPin, INPUT_PULLUP);
   pinMode(nextButtonPin, INPUT_PULLUP);
+
   randomSeed(analogRead(A0));
 
-  // Opstart-test
   inTestMode = true;
   repeatTest = false;
   testIndex = 0;
   lastTestStepTime = 0;
 }
 
-// ================= LOOP =================
+// ======================================================
+// LOOP
+// ======================================================
 void loop() {
   handleNextButton();
   handleTestMode();
   checkIdleTimeout();
 }
 
-// ================= KNOP =================
+// ======================================================
+// KNOP AFHANDELING
+// ======================================================
 void handleNextButton() {
   bool reading = digitalRead(nextButtonPin);
   unsigned long now = millis();
 
-  if (reading != lastNextButtonState) {
-    lastNextChangeTime = now;
-    lastNextButtonState = reading;
+  if (reading != lastButtonState) {
+    lastButtonChange = now;
+    lastButtonState = reading;
   }
 
-  if ((now - lastNextChangeTime) > debounceTime) {
+  if (now - lastButtonChange > debounceTime) {
 
     if (reading == LOW && !buttonHandled) {
       buttonHandled = true;
       lastUserActionTime = now;
-
       inTestMode = false;
-      clearLeds();
 
       if (digitalRead(modeSwitchPin) == HIGH) {
         randomStep();
+      } else {
+        textStep();
       }
     }
 
@@ -106,7 +121,9 @@ void handleNextButton() {
   }
 }
 
-// ================= TESTMODUS =================
+// ======================================================
+// TESTMODUS
+// ======================================================
 void handleTestMode() {
   if (!inTestMode) return;
 
@@ -117,12 +134,11 @@ void handleTestMode() {
   char c = testSeq[testIndex++];
 
   if (c == '\0') {
-    clearLeds();
     testIndex = 0;
-
     if (!repeatTest) {
       inTestMode = false;
       startupTestDone = true;
+      lastUserActionTime = millis();
     }
     return;
   }
@@ -132,9 +148,11 @@ void handleTestMode() {
   }
 }
 
-// ================= IDLE =================
+// ======================================================
+// IDLE MODUS
+// ======================================================
 void checkIdleTimeout() {
-  if (inTestMode || !startupTestDone) return;
+  if (!startupTestDone || inTestMode) return;
 
   if (millis() - lastUserActionTime > idleTimeout) {
     inTestMode = true;
@@ -144,15 +162,48 @@ void checkIdleTimeout() {
   }
 }
 
-// ================= RANDOM =================
+// ======================================================
+// TEKSTMODUS
+// ======================================================
+void textStep() {
+  char c = textMessage[textIndex++];
+
+  if (c == '\0') {
+    textIndex = 0;
+    c = textMessage[textIndex++];
+  }
+
+  if (c == ' ') {
+    clearLeds();
+    return;
+  }
+
+  if (c >= 'a' && c <= 'z') {
+    showLetter(c - 'a');
+    return;
+  }
+
+  if (c >= '0' && c <= '9') {
+    int d = c - '0';
+
+    showPattern(startDigits);
+    delay(1500);
+    showLetter(digitMap[d]);
+    delay(2000);
+    showPattern(endDigits);
+    delay(1500);
+  }
+}
+
+// ======================================================
+// RANDOM MODUS
+// ======================================================
 void randomStep() {
 
-  // Verplichte letters na cijfer
   if (lettersUntilNextDigit > 0) {
     int l;
-    do {
-      l = random(numLetters);
-    } while (!lastWasDigit && l == lastSymbolIndex);
+    do { l = random(numLetters); }
+    while (!lastWasDigit && l == lastSymbolIndex);
 
     showLetter(l);
     lastWasDigit = false;
@@ -165,9 +216,8 @@ void randomStep() {
 
   if (random(total) < randomDigitsWeight) {
     int d;
-    do {
-      d = random(10);
-    } while (lastWasDigit && d == lastSymbolIndex);
+    do { d = random(10); }
+    while (lastWasDigit && d == lastSymbolIndex);
 
     playRandomDigit(d);
     lastWasDigit = true;
@@ -175,9 +225,8 @@ void randomStep() {
     lettersUntilNextDigit = 5;
   } else {
     int l;
-    do {
-      l = random(numLetters);
-    } while (!lastWasDigit && l == lastSymbolIndex);
+    do { l = random(numLetters); }
+    while (!lastWasDigit && l == lastSymbolIndex);
 
     showLetter(l);
     lastWasDigit = false;
@@ -192,10 +241,11 @@ void playRandomDigit(int d) {
   delay(2000);
   showPattern(endDigits);
   delay(1500);
-  clearLeds();
 }
 
-// ================= HELPERS =================
+// ======================================================
+// HULPFUNCTIES
+// ======================================================
 void showLetter(int i) {
   for (int l = 0; l < 7; l++)
     digitalWrite(ledPins[l], letters[i][l]);
