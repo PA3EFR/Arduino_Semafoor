@@ -1,7 +1,7 @@
 // ================= PINNEN =================
 const int ledPins[7] = {3, 5, 7, 8, 6, 4, 2};
 const int modeSwitchPin = 9;   // LOW = tekst, HIGH = random
-const int nextButtonPin = 10;
+const int nextButtonPin = 10;  // Step switch
 
 // ================= TIMING =================
 const unsigned long debounceTime = 30;
@@ -232,5 +232,6 @@ void resetTextMode() {
   textState = INTRO;
   inDigitMode = false;
 }
+
 
 
