@@ -1,18 +1,16 @@
 // ================= PINNEN =================
 const int ledPins[7] = {3, 5, 7, 8, 6, 4, 2};
-const int modeSwitchPin =13;   // LOW = tekst, HIGH = random
+const int modeSwitchPin = 13;   // LOW = tekst, HIGH = random
 const int nextButtonPin = 10;  // Step switch
 
 // ================= TIMING =================
-const unsigned long debounceTime = 30;
+const unsigned long debounceTime = 50;   // 👈 evt. verhogen bij slechte knop
 
 // ================= RANDOM BALANS =================
-// 👉 Pas deze waarden aan voor andere verhoudingen
 const int randomLettersWeight = 20;
 const int randomDigitsWeight  = 2;
 
 // ================= CIJFER COOLDOWN =================
-// 👉 Aantal verplichte letters na een cijfer
 int lettersUntilNextDigit = 0;
 
 // ================= LETTER-ALFABET =================
@@ -72,6 +70,8 @@ const unsigned long testAllOnTime = 750;
 // ================= STATUS =================
 bool lastNextButtonState = HIGH;
 unsigned long lastNextChangeTime = 0;
+bool buttonHandled = false;
+
 bool lastModeState = HIGH;
 bool inDigitMode = false;
 
@@ -120,30 +120,37 @@ void checkModeChange() {
   }
 }
 
-// ================= KNOP =================
+// ================= KNOP (ROBUSTE DEBOUNCE) =================
 void handleNextButton() {
-  bool r = digitalRead(nextButtonPin);
+  bool reading = digitalRead(nextButtonPin);
   unsigned long now = millis();
 
-  if (r != lastNextButtonState) {
+  if (reading != lastNextButtonState) {
     lastNextChangeTime = now;
-    lastNextButtonState = r;
+    lastNextButtonState = reading;
   }
 
-  if ((now - lastNextChangeTime) > debounceTime && r == LOW) {
-    if (digitalRead(modeSwitchPin) == HIGH) {
-      randomStep();
-    } else {
-      advanceTextMode();
+  if ((now - lastNextChangeTime) > debounceTime) {
+
+    if (reading == LOW && !buttonHandled) {
+      buttonHandled = true;
+
+      if (digitalRead(modeSwitchPin) == HIGH) {
+        randomStep();
+      } else {
+        advanceTextMode();
+      }
     }
-    while (digitalRead(nextButtonPin) == LOW) {}
+
+    if (reading == HIGH) {
+      buttonHandled = false;
+    }
   }
 }
 
 // ================= RANDOM =================
 void randomStep() {
 
-  // Verplichte letters na een cijfer
   if (lettersUntilNextDigit > 0) {
     showLetter(random(numLetters));
     lettersUntilNextDigit--;
@@ -155,7 +162,7 @@ void randomStep() {
 
   if (r < randomDigitsWeight) {
     playRandomDigit(random(10));
-    lettersUntilNextDigit = 5;   // 👈 hier aanpassen
+    lettersUntilNextDigit = 5;   // 👈 aantal letters na cijfer
   } else {
     showLetter(random(numLetters));
   }
