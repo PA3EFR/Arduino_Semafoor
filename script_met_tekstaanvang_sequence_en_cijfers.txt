@@ -1,10 +1,19 @@
 // ================= PINNEN =================
 const int ledPins[7] = {3, 5, 7, 8, 6, 4, 2};
-const int modeSwitchPin = 13;   // LOW = tekst, HIGH = random
+const int modeSwitchPin =13;   // LOW = tekst, HIGH = random
 const int nextButtonPin = 10;  // Step switch
 
 // ================= TIMING =================
 const unsigned long debounceTime = 30;
+
+// ================= RANDOM BALANS =================
+// 👉 Pas deze waarden aan voor andere verhoudingen
+const int randomLettersWeight = 20;
+const int randomDigitsWeight  = 2;
+
+// ================= CIJFER COOLDOWN =================
+// 👉 Aantal verplichte letters na een cijfer
+int lettersUntilNextDigit = 0;
 
 // ================= LETTER-ALFABET =================
 const bool letters[][7] = {
@@ -76,7 +85,7 @@ void setup() {
   pinMode(nextButtonPin, INPUT_PULLUP);
   randomSeed(analogRead(A0));
 
-  playTestMode();   // 👈 testmodus bij opstart
+  playTestMode();
 }
 
 // ================= LOOP =================
@@ -95,7 +104,6 @@ void playTestMode() {
     delay(testStepTime);
   }
 
-  // Alle LEDs aan
   for (int i = 0; i < 7; i++) digitalWrite(ledPins[i], HIGH);
   delay(testAllOnTime);
   clearLeds();
@@ -134,8 +142,20 @@ void handleNextButton() {
 
 // ================= RANDOM =================
 void randomStep() {
-  if (random(2)) {
+
+  // Verplichte letters na een cijfer
+  if (lettersUntilNextDigit > 0) {
+    showLetter(random(numLetters));
+    lettersUntilNextDigit--;
+    return;
+  }
+
+  int totalWeight = randomLettersWeight + randomDigitsWeight;
+  int r = random(totalWeight);
+
+  if (r < randomDigitsWeight) {
     playRandomDigit(random(10));
+    lettersUntilNextDigit = 5;   // 👈 hier aanpassen
   } else {
     showLetter(random(numLetters));
   }
@@ -232,7 +252,3 @@ void resetTextMode() {
   textState = INTRO;
   inDigitMode = false;
 }
-
-
-
-
