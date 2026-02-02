@@ -1,258 +1,223 @@
 # Semaphore Alphabet Trainer (Arduino)
 
-Every so often the Plusscouts PA3EFR/J produce some JOTA related solder projects and/or software design.
+De Plusscouts PA3EFR/J zijn al jaren bezig met soldeer- en programmeerprojecten. Ook dit project past in het educatieve traject om scouts kennis te laten maken met semafoor seinen. Dit project is een Arduino‑gebaseerde **semafoor‑alfabet trainer** met LEDs en een drukknop. Het systeem is bedoeld voor leren, demonstreren en experimenteren met semafoorsignalen, en bevat uitgebreide logica voor **letters, cijfers, automatische testmodi en idle‑gedrag**.
 
-This project is an Arduino-based semaphore alphabet trainer using LEDs and push buttons.
-It supports **manual step-by-step signalling**, **random training**, **numeric signalling**, an **automatic power-on self test**, and an **idle attract/test mode**.
-
-The system is designed for learning, demonstrating, or experimenting with semaphore-style signalling logic, with special care taken to make the interaction robust and user-friendly even with imperfect hardware.
+Deze README is bijgewerkt zodat hij overeenkomt met de **complete eindversie** van `nieuw_script.txt`.
 
 ---
 
 ## Features
 
-* **Semaphore alphabet A–Z** using 7 LEDs
-* **Two operating modes** selectable by hardware switch
+* **Semaphore alfabet A–Z** met 7 LEDs
+* **Letters én cijfers** ondersteund in zowel tekst‑ als randommodus
+* **Twee hoofdmodi**, geselecteerd via een hardware‑schakelaar
 
-  * Text mode
-  * Random mode
-* **Numeric signalling support** with explicit start/end markers
-* **Startup self-test sequence** (runs once after power-up)
-* **Idle test / attract mode** after inactivity
-* **Robust button debouncing** (suitable for older or noisy switches)
-* **Weighted random generator** (letters appear much more often than digits)
-* **Digit spacing logic**: digits are always separated by multiple letters
-* **No repeated symbols**: the same letter or digit is never shown twice in a row
-* Fully **step-controlled** using a momentary push button
+  * Tekstmodus (vooraf ingestelde tekst)
+  * Randommodus (gewogen willekeur)
+* **Cijferondersteuning met officiële start‑ en eindmarkering**
+* **Automatische startup self‑test** bij inschakelen
+* **Uitgebreide idle / attract‑modus** met meerdere fases
+* **Robuuste knop‑debouncing**
+* **Geen herhaling van hetzelfde symbool** (letter of cijfer)
+* **Cijfer‑cooldown**: na een cijfer volgen altijd meerdere letters
+* Volledig **stap‑voor‑stap** bediend met één drukknop
 
 ---
 
-## Hardware Setup
+## Hardware‑opstelling
 
 ### LEDs
 
-* 7 LEDs connected to Arduino pins **2–8**
-* Each LED represents one semaphore arm position
+* 7 LEDs aangesloten op Arduino‑pinnen:
 
-### Inputs
+```
+{3, 5, 7, 8, 6, 4, 2}
+```
 
-| Pin | Type             | Function                                |
-| --: | ---------------- | --------------------------------------- |
-|  13 | Toggle switch    | Mode select (LOW = Text, HIGH = Random) |
-|  10 | Momentary button | Advance to next step                    |
+* Elke LED stelt één semafoorarm‑positie voor
 
-Internal pull-up resistors are used for all inputs.
+### Ingangen
+
+| Pin | Type             | Functie                                    |
+| --: | ---------------- | ------------------------------------------ |
+|  12 | Tuimelschakelaar | Modusselectie (LOW = Tekst, HIGH = Random) |
+|  10 | Drukknop         | Volgende stap                              |
+
+Alle ingangen gebruiken **interne pull‑up weerstanden**.
 
 ---
 
-## Operating Modes
+## Modusoverzicht
 
-### 1. Startup Test Mode (Automatic)
+### 1. Startup Test (automatisch)
 
-When the Arduino powers up or resets, a self-test is played **once**:
+Bij het opstarten wordt **eenmalig** een zelftest afgespeeld.
 
-* Sequence:
-  `nrudurnabcdefgfedcbadndrdudrdn`
+* Testsequentie:
 
-* Each letter is shown for **0.35 seconds**
+```
+abcdefgfedcbanrudurngfedcbabcdefgnrudurn
+```
 
-* After the sequence:
+* Elke stap wordt ongeveer **80 ms** weergegeven
+* De test is **niet onderbreekbaar**
+* Na afloop begint de normale werking
 
-  * LEDs are cleared
+Doel van deze test:
 
-* After this, normal operation begins
-
-This test verifies:
-
-* LED wiring
-* Alphabet mapping
-* Timing consistency
-
-The startup test **cannot be interrupted**.
+* Controleren van LED‑bedrading
+* Controleren van alfabet‑mapping
+* Visuele feedback bij inschakelen
 
 ---
 
-### 2. Text Mode (Mode switch = LOW)
+### 2. Tekstmodus (schakelaar = LOW)
 
-Text mode sends a predefined text **step by step** using the button on pin 10.
-
-#### Text start & end signal
-
-Before and after the text, a notification sequence is sent:
-
-```
-rudurudur
-```
-
-* Total duration: **2 seconds**
-* Requires a button press to start
-
-#### Letters
-
-* Each button press sends **one letter**
-* Spaces turn **all LEDs off**
-
-#### Numbers in text
-
-Numbers are handled as **groups** and are clearly marked.
-
-**Start digits marker**
-
-```
-{0,0,0,1,1,0,0}
-```
-
-**End digits marker**
-
-```
-{0,0,0,1,0,1,0}
-```
-
-* The start marker is sent **once before the first digit**
-* All digits follow sequentially
-* The end marker is sent **once after the last digit**
-
-##### Digit mapping
-
-| Digit | Semaphore Letter |
-| ----: | ---------------- |
-|     0 | K                |
-|     1 | A                |
-|     2 | B                |
-|     3 | C                |
-|     4 | D                |
-|     5 | E                |
-|     6 | F                |
-|     7 | G                |
-|     8 | H                |
-|     9 | I                |
-
----
-
-### 3. Random Mode (Mode switch = HIGH)
-
-Each button press generates **one unique symbol**:
-
-* a random letter **or**
-* a random digit
-
-#### Random balance
-
-* Letters and digits are chosen using **weighted randomness**
-* Default ratio: **20 letters : 2 digits**
-* This makes letters appear far more often than digits
-
-#### Digit spacing rule
-
-* After any digit, **at least 5 letters** are always generated
-* Two digits can never appear close together
-
-#### No repetition rule
-
-* The same letter is never shown twice in a row
-* The same digit is never shown twice in a row
-* This rule applies across letter ↔ digit transitions
-
-#### Random digits
-
-Each digit is sent as a **self-contained sequence**:
-
-1. Start digits marker — **1.5 s**
-2. Digit — **2.0 s**
-3. End digits marker — **1.5 s**
-4. LEDs off, wait for next button press
-
-Digits in random mode are **never grouped**.
-
----
-
-### 4. Idle Test / Attract Mode (Automatic)
-
-If the step button is **not pressed for 15 seconds**:
-
-* The system automatically enters **test / attract mode**
-* The same test sequence as the startup test is played
-* The sequence **repeats continuously**
-
-As soon as the step button is pressed:
-
-* The idle test stops immediately
-* Normal operation resumes
-
-This makes the device suitable for:
-
-* demonstrations
-* exhibitions
-* unattended displays
-
----
-
-## Customization
-
-You can easily modify:
-
-* **Text content**
+In tekstmodus wordt een vooraf ingestelde tekst **letter voor letter** weergegeven.
 
 ```cpp
-const char text[] = "your text here";
+const char textMessage[] = "pa3efr ";
 ```
 
-* **Random balance (letters vs digits)**
+* Elke druk op de knop toont **één teken**
+* Spaties schakelen **alle LEDs uit** (pauze)
+* Na het einde van de tekst begint deze opnieuw
+
+#### Cijfers in tekstmodus
+
+Cijfers worden altijd als een **volledig cijferpatroon** verzonden:
+
+1. **Start‑cijfermarker** (1,5 s)
+2. Het cijfer zelf (2,0 s)
+3. **Eind‑cijfermarker** (1,5 s)
+
+Start‑ en eindmarkeringen:
+
+```cpp
+startDigits = {0,0,0,1,1,0,0}
+endDigits   = {0,0,0,1,0,1,0}
+```
+
+Cijfers worden vertaald naar letters volgens:
+
+| Cijfer | Letter |
+| -----: | ------ |
+|      0 | K      |
+|      1 | A      |
+|      2 | B      |
+|      3 | C      |
+|      4 | D      |
+|      5 | E      |
+|      6 | F      |
+|      7 | G      |
+|      8 | H      |
+|      9 | I      |
+
+---
+
+### 3. Randommodus (schakelaar = HIGH)
+
+Elke druk op de knop genereert **één nieuw symbool**:
+
+* Een letter **of**
+* Een cijfer (met volledig cijferpatroon)
+
+#### Gewogen willekeur
+
+```cpp
+randomLettersWeight = 20;
+randomDigitsWeight  = 2;
+```
+
+* Letters verschijnen veel vaker dan cijfers
+
+#### Cijfer‑regels
+
+* Na elk cijfer volgen **minstens 5 letters**
+* Twee cijfers kunnen nooit kort na elkaar verschijnen
+* Hetzelfde cijfer of dezelfde letter wordt nooit herhaald
+
+Cijfers in randommodus worden altijd verzonden als:
+
+```
+startDigits → cijfer → endDigits
+```
+
+---
+
+### 4. Idle / Attract‑modus (automatisch)
+
+Wanneer de knop **15 seconden niet wordt ingedrukt**, gaat het systeem automatisch in idle‑modus.
+
+Idle‑modus bestaat uit **drie fases**:
+
+1. **Testsequentie** (zoals startup test)
+2. **Snelle random letters** (alleen letters, geen cijfers)
+3. **Vaststaande letter** (5 seconden)
+
+Na meerdere cycli begint de idle‑modus opnieuw bij de testsequentie.
+
+* Zodra de knop wordt ingedrukt:
+
+  * Idle stopt onmiddellijk
+  * Normale werking hervat
+
+Ideaal voor:
+
+* Demonstraties
+* Tentoonstellingen
+* Onbemand gebruik
+
+---
+
+## Instelbare parameters
+
+Belangrijke aanpasbare instellingen:
+
+```cpp
+const unsigned long debounceTime = 50;
+const unsigned long idleTimeout  = 15000;
+```
 
 ```cpp
 const int randomLettersWeight = 20;
 const int randomDigitsWeight  = 2;
 ```
 
-* **Minimum letters after a digit**
-
 ```cpp
-lettersUntilNextDigit = 5;
+int lettersUntilNextDigit = 5;
 ```
 
-* **Idle timeout**
-
-```cpp
-const unsigned long idleTimeout = 15000;
-```
-
-* **Debounce time for the step button**
-
-```cpp
-const unsigned long debounceTime = 50;
-```
-
-* **Alphabet mapping**
-  Adjust the `letters[][7]` table to match your own semaphore layout.
+* Tekstinhoud
+* Idle‑gedrag
+* Willekeur‑balans
+* Alfabet‑mapping (`letters[][7]`)
 
 ---
 
-## Design Notes
+## Ontwerpnotities
 
-* Button handling uses **robust edge-based debouncing**
-* User input always has priority over automatic behaviour
-* Startup test and idle test share the same engine
-* Random generation avoids cognitive repetition
-* Blocking delays are only used inside clearly defined signalling sequences
-
----
-
-## Possible Extensions
-
-* Long-press or auto-repeat on the step button
-* Different idle sequences
-* Multiple selectable texts
-* Adjustable speed profiles
-* PWM brightness control
-* External semaphore arms instead of LEDs
+* Edge‑based knop‑afhandeling met debounce
+* Startup‑ en idle‑tests delen dezelfde engine
+* Gebruikersinput heeft altijd prioriteit
+* Geen cognitieve herhaling in randommodus
+* Blokkerende delays alleen binnen duidelijke signaalpatronen
 
 ---
 
-## License
+## Mogelijke uitbreidingen
 
-This project is intended for educational and experimental use.
+* Lange‑druk of auto‑repeat op de knop
+* Meerdere teksten selecteerbaar
+* Instelbare snelheden
+* PWM helderheidsregeling
+* Externe semafoorarmen i.p.v. LEDs
 
-Use, modify, and share freely.
+---
 
-Have fun,
+## Licentie
+
+Vrij te gebruiken voor educatieve en experimentele doeleinden.
+
+Veel plezier,
 **Erwin PA3EFR**
