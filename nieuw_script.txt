@@ -1,0 +1,185 @@
+// ======================================================
+// Semaphore Alphabet Trainer – idle cycle versie
+// ======================================================
+
+// ---------------- PINNEN ----------------
+const int ledPins[7] = {3, 5, 7, 8, 6, 4, 2};
+const int modeSwitchPin = 12;
+const int nextButtonPin = 10;
+
+// ---------------- TIMING ----------------
+const unsigned long debounceTime = 50;
+const unsigned long idleTimeout  = 15000;
+
+// ---------------- TEKST ----------------
+const char textMessage[] = "pa3efr ";
+int textIndex = 0;
+
+// ---------------- LETTERS ----------------
+const bool letters[][7] = {
+  {1,0,0,0,0,0,0},{0,1,0,0,0,0,0},{0,0,1,0,0,0,0},
+  {0,0,0,1,0,0,0},{0,0,0,0,1,0,0},{0,0,0,0,0,1,0},
+  {0,0,0,0,0,0,1},{1,1,0,0,0,0,0},{1,0,1,0,0,0,0},
+  {0,0,0,1,0,1,0},{1,0,0,1,0,0,0},{1,0,0,0,1,0,0},
+  {1,0,0,0,0,1,0},{1,0,0,0,0,0,1},{0,1,1,0,0,0,0},
+  {0,1,0,1,0,0,0},{0,1,0,0,1,0,0},{0,1,0,0,0,1,0},
+  {0,1,0,0,0,0,1},{0,0,1,1,0,0,0},{0,0,1,0,1,0,0},
+  {0,0,0,1,0,0,1},{0,0,0,0,1,1,0},{0,0,0,0,1,0,1},
+  {0,0,1,0,0,1,0},{0,0,0,0,0,1,1}
+};
+const int numLetters = 26;
+
+// ---------------- IDLE SEQUENCE ----------------
+const char testSeq[] = "abcdefgfedcbanrudurngfedcbabcdefgnrudurn";
+
+// ---------------- STATUS ----------------
+bool lastButtonState = HIGH;
+bool buttonHandled = false;
+unsigned long lastButtonChange = 0;
+unsigned long lastUserActionTime = 0;
+
+bool idleActive = false;
+
+// ---------------- IDLE STATE MACHINE ----------------
+enum IdleState {
+  IDLE_TESTSEQ,
+  IDLE_RANDOM_FAST,
+  IDLE_SINGLE_LETTER
+};
+
+IdleState idleState = IDLE_TESTSEQ;
+unsigned long idleStateStart = 0;
+unsigned long idleLastStep = 0;
+int idleIndex = 0;
+int idleCycleCount = 0;
+
+// ======================================================
+// SETUP
+// ======================================================
+void setup() {
+  for (int i = 0; i < 7; i++) pinMode(ledPins[i], OUTPUT);
+  pinMode(modeSwitchPin, INPUT_PULLUP);
+  pinMode(nextButtonPin, INPUT_PULLUP);
+  randomSeed(analogRead(A0));
+  lastUserActionTime = millis();
+}
+
+// ======================================================
+// LOOP
+// ======================================================
+void loop() {
+  handleNextButton();
+  handleIdle();
+}
+
+// ======================================================
+// KNOP
+// ======================================================
+void handleNextButton() {
+  bool reading = digitalRead(nextButtonPin);
+  unsigned long now = millis();
+
+  if (reading != lastButtonState) {
+    lastButtonChange = now;
+    lastButtonState = reading;
+  }
+
+  if (now - lastButtonChange > debounceTime) {
+    if (reading == LOW && !buttonHandled) {
+      buttonHandled = true;
+      idleActive = false;
+      lastUserActionTime = now;
+
+      if (digitalRead(modeSwitchPin) == HIGH) {
+        showLetter(random(numLetters));
+      } else {
+        textStep();
+      }
+    }
+    if (reading == HIGH) buttonHandled = false;
+  }
+}
+
+// ======================================================
+// IDLE LOGICA
+// ======================================================
+void handleIdle() {
+  if (!idleActive) {
+    if (millis() - lastUserActionTime > idleTimeout) {
+      idleActive = true;
+      idleState = IDLE_TESTSEQ;
+      idleStateStart = millis();
+      idleLastStep = 0;
+      idleIndex = 0;
+      idleCycleCount = 0;
+    }
+    return;
+  }
+
+  unsigned long now = millis();
+
+  switch (idleState) {
+
+    case IDLE_TESTSEQ:
+      if (now - idleLastStep >= 80) {
+        idleLastStep = now;
+        char c = testSeq[idleIndex++];
+        if (c == '\0') idleIndex = 0;
+        showLetter(c - 'a');
+      }
+      if (now - idleStateStart >= 10000) {
+        idleState = IDLE_RANDOM_FAST;
+        idleStateStart = now;
+        idleLastStep = 0;
+        idleCycleCount = 0;
+      }
+      break;
+
+    case IDLE_RANDOM_FAST:
+      if (now - idleLastStep >= 10) {
+        idleLastStep = now;
+        showLetter(random(numLetters));
+      }
+      if (now - idleStateStart >= 2000) {
+        idleState = IDLE_SINGLE_LETTER;
+        idleStateStart = now;
+      }
+      break;
+
+    case IDLE_SINGLE_LETTER:
+      showLetter(random(numLetters));
+      if (now - idleStateStart >= 2000) {
+        idleCycleCount++;
+        if (idleCycleCount >= 7) {
+          idleState = IDLE_TESTSEQ;
+          idleStateStart = now;
+          idleIndex = 0;
+        } else {
+          idleState = IDLE_RANDOM_FAST;
+          idleStateStart = now;
+          idleLastStep = 0;
+        }
+      }
+      break;
+  }
+}
+
+// ======================================================
+// TEKST
+// ======================================================
+void textStep() {
+  char c = textMessage[textIndex++];
+  if (c == '\0') {
+    textIndex = 0;
+    c = textMessage[textIndex++];
+  }
+  if (c >= 'a' && c <= 'z') showLetter(c - 'a');
+}
+
+// ======================================================
+// HULPFUNCTIES
+// ======================================================
+void showLetter(int i) {
+  for (int l = 0; l < 7; l++)
+    digitalWrite(ledPins[l], letters[i][l]);
+}
