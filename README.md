@@ -205,16 +205,6 @@ int lettersUntilNextDigit = 5;
 
 ---
 
-## Mogelijke uitbreidingen
-
-* Lange‑druk of auto‑repeat op de knop
-* Meerdere teksten selecteerbaar
-* Instelbare snelheden
-* PWM helderheidsregeling
-* Externe semafoorarmen i.p.v. LEDs
-
----
-
 ## Licentie
 
 Vrij te gebruiken voor educatieve en experimentele doeleinden.
