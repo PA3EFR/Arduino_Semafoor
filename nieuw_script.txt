@@ -1,5 +1,5 @@
 // ======================================================
-// Semaphore Alphabet Trainer – idle cycle versie
+// Semaphore Alphabet Trainer – idle cycle FIXED
 // ======================================================
 
 // ---------------- PINNEN ----------------
@@ -52,6 +52,7 @@ unsigned long idleStateStart = 0;
 unsigned long idleLastStep = 0;
 int idleIndex = 0;
 int idleCycleCount = 0;
+int fixedIdleLetter = 0;
 
 // ======================================================
 // SETUP
@@ -101,9 +102,10 @@ void handleNextButton() {
 }
 
 // ======================================================
-// IDLE LOGICA
+// IDLE LOGICA (GEFIXT)
 // ======================================================
 void handleIdle() {
+
   if (!idleActive) {
     if (millis() - lastUserActionTime > idleTimeout) {
       idleActive = true;
@@ -120,6 +122,7 @@ void handleIdle() {
 
   switch (idleState) {
 
+    // ---------- 10s vaste testsequence ----------
     case IDLE_TESTSEQ:
       if (now - idleLastStep >= 80) {
         idleLastStep = now;
@@ -135,20 +138,23 @@ void handleIdle() {
       }
       break;
 
+    // ---------- 2s random letters @10ms ----------
     case IDLE_RANDOM_FAST:
       if (now - idleLastStep >= 10) {
         idleLastStep = now;
         showLetter(random(numLetters));
       }
       if (now - idleStateStart >= 2000) {
+        fixedIdleLetter = random(numLetters);   // één keer kiezen
+        showLetter(fixedIdleLetter);             // vastzetten
         idleState = IDLE_SINGLE_LETTER;
         idleStateStart = now;
       }
       break;
 
+    // ---------- 5s vaste letter ----------
     case IDLE_SINGLE_LETTER:
-      showLetter(random(numLetters));
-      if (now - idleStateStart >= 2000) {
+      if (now - idleStateStart >= 5000) {
         idleCycleCount++;
         if (idleCycleCount >= 7) {
           idleState = IDLE_TESTSEQ;
