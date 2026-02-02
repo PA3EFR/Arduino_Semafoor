@@ -29,6 +29,11 @@ const bool letters[][7] = {
 };
 const int numLetters = 26;
 
+// ---------------- CIJFERS ----------------
+const bool startDigits[7] = {0,0,0,1,1,0,0};
+const bool endDigits[7]   = {0,0,0,1,0,1,0};
+const int digitMap[10]    = {10,0,1,2,3,4,5,6,7,8};
+
 // ---------------- TEST SEQUENCE ----------------
 const char testSeq[] = "abcdefgfedcbanrudurngfedcbabcdefgnrudurn";
 
@@ -79,7 +84,6 @@ void setup() {
 // ======================================================
 void loop() {
 
-  // ---- STARTUP TEST BLOKKEERT ALLES ----
   if (startupTestActive) {
     handleStartupTest();
     return;
@@ -90,7 +94,7 @@ void loop() {
 }
 
 // ======================================================
-// STARTUP TEST (1x, altijd)
+// STARTUP TEST
 // ======================================================
 void handleStartupTest() {
   unsigned long now = millis();
@@ -110,7 +114,7 @@ void handleStartupTest() {
 }
 
 // ======================================================
-// KNOP AFHANDELING
+// KNOP
 // ======================================================
 void handleNextButton() {
   bool reading = digitalRead(nextButtonPin);
@@ -128,9 +132,9 @@ void handleNextButton() {
       lastUserActionTime = now;
 
       if (digitalRead(modeSwitchPin) == HIGH) {
-        showLetter(random(numLetters));   // RANDOM modus
+        showLetter(random(numLetters));
       } else {
-        textStep();                       // TEKST modus
+        textStep();
       }
     }
     if (reading == HIGH) buttonHandled = false;
@@ -138,7 +142,7 @@ void handleNextButton() {
 }
 
 // ======================================================
-// IDLE LOGICA
+// IDLE
 // ======================================================
 void handleIdle() {
 
@@ -204,7 +208,7 @@ void handleIdle() {
 }
 
 // ======================================================
-// TEKST MODUS
+// TEKST MODUS (LETTERS + CIJFERS)
 // ======================================================
 void textStep() {
   char c = textMessage[textIndex++];
@@ -214,14 +218,31 @@ void textStep() {
     c = textMessage[textIndex++];
   }
 
+  // spatie = pauze
   if (c == ' ') {
     for (int i = 0; i < 7; i++)
       digitalWrite(ledPins[i], LOW);
     return;
   }
 
+  // letter
   if (c >= 'a' && c <= 'z') {
     showLetter(c - 'a');
+    return;
+  }
+
+  // cijfer
+  if (c >= '0' && c <= '9') {
+    int d = c - '0';
+
+    showPattern(startDigits);
+    delay(1500);
+
+    showLetter(digitMap[d]);
+    delay(2000);
+
+    showPattern(endDigits);
+    delay(1500);
   }
 }
 
@@ -231,4 +252,9 @@ void textStep() {
 void showLetter(int i) {
   for (int l = 0; l < 7; l++)
     digitalWrite(ledPins[l], letters[i][l]);
+}
+
+void showPattern(const bool p[7]) {
+  for (int i = 0; i < 7; i++)
+    digitalWrite(ledPins[i], p[i]);
 }
