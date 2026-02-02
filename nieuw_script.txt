@@ -1,5 +1,5 @@
 // ======================================================
-// Semaphore Alphabet Trainer – startup test + idle cycle
+// Semaphore Alphabet Trainer – FIXED startup test
 // ======================================================
 
 // ---------------- PINNEN ----------------
@@ -10,10 +10,6 @@ const int nextButtonPin = 10;
 // ---------------- TIMING ----------------
 const unsigned long debounceTime = 50;
 const unsigned long idleTimeout  = 15000;
-
-// ---------------- TEKST ----------------
-const char textMessage[] = "pa3efr ";
-int textIndex = 0;
 
 // ---------------- LETTERS ----------------
 const bool letters[][7] = {
@@ -29,21 +25,21 @@ const bool letters[][7] = {
 };
 const int numLetters = 26;
 
-// ---------------- SEQUENTIE ----------------
+// ---------------- TEST SEQUENCE ----------------
 const char testSeq[] = "abcdefgfedcbanrudurngfedcbabcdefgnrudurn";
-
-// ---------------- STATUS ----------------
-bool lastButtonState = HIGH;
-bool buttonHandled = false;
-unsigned long lastButtonChange = 0;
-unsigned long lastUserActionTime = 0;
 
 // ---------------- STARTUP TEST ----------------
 bool startupTestActive = true;
 int startupIndex = 0;
 unsigned long startupLastStep = 0;
 
+// ---------------- KNOP ----------------
+bool lastButtonState = HIGH;
+bool buttonHandled = false;
+unsigned long lastButtonChange = 0;
+
 // ---------------- IDLE ----------------
+unsigned long lastUserActionTime = 0;
 bool idleActive = false;
 
 enum IdleState {
@@ -69,7 +65,10 @@ void setup() {
 
   randomSeed(analogRead(A0));
 
-  lastUserActionTime = millis();
+  // STARTUP TEST MOET ALTIJD DRAAIEN
+  startupTestActive = true;
+  startupIndex = 0;
+  startupLastStep = 0;
 }
 
 // ======================================================
@@ -77,9 +76,10 @@ void setup() {
 // ======================================================
 void loop() {
 
+  // -------- HARD BLOKKEER STARTUP TEST --------
   if (startupTestActive) {
     handleStartupTest();
-    return;                 // niets anders doen tijdens startup test
+    return;
   }
 
   handleNextButton();
@@ -87,7 +87,7 @@ void loop() {
 }
 
 // ======================================================
-// STARTUP TEST (1x)
+// STARTUP TEST (ONVOORWAARDELIJK)
 // ======================================================
 void handleStartupTest() {
   unsigned long now = millis();
@@ -99,7 +99,7 @@ void handleStartupTest() {
 
   if (c == '\0') {
     startupTestActive = false;
-    lastUserActionTime = millis();
+    lastUserActionTime = millis();   // PAS NU START IDLE TIMER
     return;
   }
 
@@ -124,11 +124,7 @@ void handleNextButton() {
       idleActive = false;
       lastUserActionTime = now;
 
-      if (digitalRead(modeSwitchPin) == HIGH) {
-        showLetter(random(numLetters));
-      } else {
-        textStep();
-      }
+      showLetter(random(numLetters)); // modus-onafhankelijk hier
     }
     if (reading == HIGH) buttonHandled = false;
   }
@@ -201,19 +197,7 @@ void handleIdle() {
 }
 
 // ======================================================
-// TEKST
-// ======================================================
-void textStep() {
-  char c = textMessage[textIndex++];
-  if (c == '\0') {
-    textIndex = 0;
-    c = textMessage[textIndex++];
-  }
-  if (c >= 'a' && c <= 'z') showLetter(c - 'a');
-}
-
-// ======================================================
-// HULPFUNCTIES
+// OUTPUT
 // ======================================================
 void showLetter(int i) {
   for (int l = 0; l < 7; l++)
