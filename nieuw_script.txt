@@ -1,5 +1,5 @@
 // ======================================================
-// Semaphore Alphabet Trainer – idle cycle FIXED
+// Semaphore Alphabet Trainer – startup test + idle cycle
 // ======================================================
 
 // ---------------- PINNEN ----------------
@@ -29,7 +29,7 @@ const bool letters[][7] = {
 };
 const int numLetters = 26;
 
-// ---------------- IDLE SEQUENCE ----------------
+// ---------------- SEQUENTIE ----------------
 const char testSeq[] = "abcdefgfedcbanrudurngfedcbabcdefgnrudurn";
 
 // ---------------- STATUS ----------------
@@ -38,9 +38,14 @@ bool buttonHandled = false;
 unsigned long lastButtonChange = 0;
 unsigned long lastUserActionTime = 0;
 
+// ---------------- STARTUP TEST ----------------
+bool startupTestActive = true;
+int startupIndex = 0;
+unsigned long startupLastStep = 0;
+
+// ---------------- IDLE ----------------
 bool idleActive = false;
 
-// ---------------- IDLE STATE MACHINE ----------------
 enum IdleState {
   IDLE_TESTSEQ,
   IDLE_RANDOM_FAST,
@@ -61,7 +66,9 @@ void setup() {
   for (int i = 0; i < 7; i++) pinMode(ledPins[i], OUTPUT);
   pinMode(modeSwitchPin, INPUT_PULLUP);
   pinMode(nextButtonPin, INPUT_PULLUP);
+
   randomSeed(analogRead(A0));
+
   lastUserActionTime = millis();
 }
 
@@ -69,8 +76,34 @@ void setup() {
 // LOOP
 // ======================================================
 void loop() {
+
+  if (startupTestActive) {
+    handleStartupTest();
+    return;                 // niets anders doen tijdens startup test
+  }
+
   handleNextButton();
   handleIdle();
+}
+
+// ======================================================
+// STARTUP TEST (1x)
+// ======================================================
+void handleStartupTest() {
+  unsigned long now = millis();
+
+  if (now - startupLastStep < 80) return;
+  startupLastStep = now;
+
+  char c = testSeq[startupIndex++];
+
+  if (c == '\0') {
+    startupTestActive = false;
+    lastUserActionTime = millis();
+    return;
+  }
+
+  showLetter(c - 'a');
 }
 
 // ======================================================
@@ -102,7 +135,7 @@ void handleNextButton() {
 }
 
 // ======================================================
-// IDLE LOGICA (GEFIXT)
+// IDLE LOGICA
 // ======================================================
 void handleIdle() {
 
@@ -122,7 +155,6 @@ void handleIdle() {
 
   switch (idleState) {
 
-    // ---------- 10s vaste testsequence ----------
     case IDLE_TESTSEQ:
       if (now - idleLastStep >= 80) {
         idleLastStep = now;
@@ -138,21 +170,19 @@ void handleIdle() {
       }
       break;
 
-    // ---------- 2s random letters @10ms ----------
     case IDLE_RANDOM_FAST:
       if (now - idleLastStep >= 10) {
         idleLastStep = now;
         showLetter(random(numLetters));
       }
       if (now - idleStateStart >= 2000) {
-        fixedIdleLetter = random(numLetters);   // één keer kiezen
-        showLetter(fixedIdleLetter);             // vastzetten
+        fixedIdleLetter = random(numLetters);
+        showLetter(fixedIdleLetter);
         idleState = IDLE_SINGLE_LETTER;
         idleStateStart = now;
       }
       break;
 
-    // ---------- 5s vaste letter ----------
     case IDLE_SINGLE_LETTER:
       if (now - idleStateStart >= 5000) {
         idleCycleCount++;
