@@ -1,5 +1,5 @@
 // ======================================================
-// Semaphore Alphabet Trainer – COMPLETE EINDVERSIE
+// Semaphore Alphabet Trainer – COMPLETE EINDVERSIE (met mode reset)
 // ======================================================
 
 // ---------------- PINNEN ----------------
@@ -79,6 +79,9 @@ int idleIndex = 0;
 int idleCycleCount = 0;
 int fixedIdleLetter = 0;
 
+// ---------------- MODE TRACKING (NIEUW) ----------------
+int lastModeState = HIGH;   // start aannemend dat schakelaar op RANDOM staat
+
 // ======================================================
 // HULP: MESSAGE automatisch spelen (ca. 2 s totaal)
 // ======================================================
@@ -105,12 +108,24 @@ void setup() {
   startupTestActive = true;
   startupIndex = 0;
   startupLastStep = 0;
+
+  lastModeState = digitalRead(modeSwitchPin); // huidige startstand modeswitch
 }
 
 // ======================================================
 // LOOP
 // ======================================================
 void loop() {
+
+  // --- Detectie overgang RANDOM -> TEKST en tekst-modus resetten ---
+  int currentModeState = digitalRead(modeSwitchPin);
+  if (lastModeState == HIGH && currentModeState == LOW) {
+    // RANDOM (HIGH) -> TEKST (LOW): reset tekststatus
+    textIndex = 0;
+    messagePlayedAtStart = false;
+  }
+  lastModeState = currentModeState;
+  // -----------------------------------------------------------------
 
   if (startupTestActive) {
     handleStartupTest();
@@ -160,7 +175,7 @@ void handleNextButton() {
       lastUserActionTime = now;
 
       if (digitalRead(modeSwitchPin) == HIGH) {
-        // RANDOM modus: nu met letters + cijfers, maar startDigits alleen in cijferpatroon
+        // RANDOM modus: letters + cijfers, startDigits alleen in cijferpatroon
         randomStep();
       } else {
         // TEKST modus
@@ -257,16 +272,16 @@ void textStep() {
   if (c == '\0') {
     // terugzetten voor de volgende sessie
     textIndex = 0;
-    messagePlayedAtStart = false; // zodat een volgende druk weer met MESSAGE begint
+    messagePlayedAtStart = false; // zodat een volgende druk weer met MESSAGE begint...
 
     // nu de afsluitende MESSAGE automatisch spelen
     playMessage();
-    
+
     // Na MESSAGE: alle LEDs uit
     for (int i = 0; i < 7; i++) {
       digitalWrite(ledPins[i], LOW);
     }
-    
+
     return;
   }
 
