@@ -1,5 +1,5 @@
 // ======================================================
-// Semaphore Alphabet Trainer – COMPLETE EINDVERSIE (met mode reset)
+// Semaphore Alphabet Trainer – COMPLETE EINDVERSIE (met mode reset + idle glitch fix)
 // ======================================================
 
 // ---------------- PINNEN ----------------
@@ -79,8 +79,8 @@ int idleIndex = 0;
 int idleCycleCount = 0;
 int fixedIdleLetter = 0;
 
-// ---------------- MODE TRACKING (NIEUW) ----------------
-int lastModeState = HIGH;   // start aannemend dat schakelaar op RANDOM staat
+// ---------------- MODE TRACKING ----------------
+int lastModeState = HIGH;
 
 // ======================================================
 // HULP: MESSAGE automatisch spelen (ca. 2 s totaal)
@@ -90,8 +90,17 @@ void playMessage() {
     char c = messageSeq[i];
     if (c >= 'a' && c <= 'z') {
       showLetter(c - 'a');
-      delay(200); // 0,2 s per letter -> 9 letters ~1,8 s
+      delay(200);
     }
+  }
+}
+
+// ======================================================
+// ALLE LEDS UIT (voor state transitions)
+// ======================================================
+void allLEDsOff() {
+  for (int i = 0; i < 7; i++) {
+    digitalWrite(ledPins[i], LOW);
   }
 }
 
@@ -109,7 +118,7 @@ void setup() {
   startupIndex = 0;
   startupLastStep = 0;
 
-  lastModeState = digitalRead(modeSwitchPin); // huidige startstand modeswitch
+  lastModeState = digitalRead(modeSwitchPin);
 }
 
 // ======================================================
@@ -120,12 +129,10 @@ void loop() {
   // --- Detectie overgang RANDOM -> TEKST en tekst-modus resetten ---
   int currentModeState = digitalRead(modeSwitchPin);
   if (lastModeState == HIGH && currentModeState == LOW) {
-    // RANDOM (HIGH) -> TEKST (LOW): reset tekststatus
     textIndex = 0;
     messagePlayedAtStart = false;
   }
   lastModeState = currentModeState;
-  // -----------------------------------------------------------------
 
   if (startupTestActive) {
     handleStartupTest();
@@ -175,10 +182,8 @@ void handleNextButton() {
       lastUserActionTime = now;
 
       if (digitalRead(modeSwitchPin) == HIGH) {
-        // RANDOM modus: letters + cijfers, startDigits alleen in cijferpatroon
         randomStep();
       } else {
-        // TEKST modus
         textStep();
       }
     }
@@ -187,7 +192,7 @@ void handleNextButton() {
 }
 
 // ======================================================
-// IDLE
+// IDLE (met glitch-preventie)
 // ======================================================
 void handleIdle() {
 
@@ -215,9 +220,13 @@ void handleIdle() {
         showLetter(c - 'a');
       }
       if (now - idleStateStart >= 10000) {
+        // GLITCH FIX: alle LEDs uit voor state change
+        allLEDsOff();
+        delay(10);
+        
         idleState = IDLE_RANDOM_FAST;
         idleStateStart = now;
-        idleLastStep = 0;
+        idleLastStep = now;  // voorkomt instant showLetter()
         idleCycleCount = 0;
       }
       break;
@@ -225,10 +234,13 @@ void handleIdle() {
     case IDLE_RANDOM_FAST:
       if (now - idleLastStep >= 10) {
         idleLastStep = now;
-        // In idle alleen letters, geen startDigits of cijfers
         showLetter(random(numLetters));
       }
       if (now - idleStateStart >= 2000) {
+        // GLITCH FIX: alle LEDs uit voor state change
+        allLEDsOff();
+        delay(10);
+        
         fixedIdleLetter = random(numLetters);
         showLetter(fixedIdleLetter);
         idleState = IDLE_SINGLE_LETTER;
@@ -240,13 +252,21 @@ void handleIdle() {
       if (now - idleStateStart >= 5000) {
         idleCycleCount++;
         if (idleCycleCount >= 7) {
+          // GLITCH FIX: alle LEDs uit voor state change
+          allLEDsOff();
+          delay(10);
+          
           idleState = IDLE_TESTSEQ;
           idleStateStart = now;
           idleIndex = 0;
         } else {
+          // GLITCH FIX: alle LEDs uit voor state change
+          allLEDsOff();
+          delay(10);
+          
           idleState = IDLE_RANDOM_FAST;
           idleStateStart = now;
-          idleLastStep = 0;
+          idleLastStep = now;
         }
       }
       break;
@@ -258,72 +278,52 @@ void handleIdle() {
 // ======================================================
 void textStep() {
 
-  // 1) Eerste druk in TEKST: MESSAGE automatisch afspelen
   if (!messagePlayedAtStart) {
-    playMessage();          // ca. 2 s automatisch
+    playMessage();
     messagePlayedAtStart = true;
-    textIndex = 0;          // daarna vanaf begin van TEKST
+    textIndex = 0;
   }
 
-  // 2) Daarna per druk de volgende letter/cijfer uit TEKST
   char c = textMessage[textIndex++];
 
-  // einde van de TEKST?
   if (c == '\0') {
-    // terugzetten voor de volgende sessie
     textIndex = 0;
-    messagePlayedAtStart = false; // zodat een volgende druk weer met MESSAGE begint...
-
-    // nu de afsluitende MESSAGE automatisch spelen
+    messagePlayedAtStart = false;
     playMessage();
-
-    // Na MESSAGE: alle LEDs uit
-    for (int i = 0; i < 7; i++) {
-      digitalWrite(ledPins[i], LOW);
-    }
-
+    allLEDsOff();
     return;
   }
 
-  // spatie = pauze
   if (c == ' ') {
-    for (int i = 0; i < 7; i++)
-      digitalWrite(ledPins[i], LOW);
+    allLEDsOff();
     return;
   }
 
-  // letter
   if (c >= 'a' && c <= 'z') {
     showLetter(c - 'a');
     return;
   }
 
-  // cijfer (startDigits en endDigits alleen hier en bij randomStep/playRandomDigit)
   if (c >= '0' && c <= '9') {
     int d = c - '0';
-
     showPattern(startDigits);
     delay(1500);
-
     showLetter(digitMap[d]);
     delay(2000);
-
     showPattern(endDigits);
     delay(1500);
   }
 }
 
 // ======================================================
-// RANDOM MODUS (LETTERS + CIJFERS, correct cijferpatroon)
+// RANDOM MODUS (LETTERS + CIJFERS)
 // ======================================================
 void randomStep() {
 
-  // Als we nog letters moeten tonen vóór een volgend cijfer
   if (lettersUntilNextDigit > 0) {
     int l;
     do { l = random(numLetters); }
     while (!lastWasDigit && l == lastSymbolIndex);
-
     showLetter(l);
     lastWasDigit = false;
     lastSymbolIndex = l;
@@ -334,21 +334,17 @@ void randomStep() {
   int total = randomLettersWeight + randomDigitsWeight;
 
   if (random(total) < randomDigitsWeight) {
-    // Cijfer: altijd via startDigits -> digit -> endDigits
     int d;
     do { d = random(10); }
     while (lastWasDigit && d == lastSymbolIndex);
-
     playRandomDigit(d);
     lastWasDigit = true;
     lastSymbolIndex = d;
     lettersUntilNextDigit = 5;
   } else {
-    // Letter
     int l;
     do { l = random(numLetters); }
     while (!lastWasDigit && l == lastSymbolIndex);
-
     showLetter(l);
     lastWasDigit = false;
     lastSymbolIndex = l;
