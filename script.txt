@@ -16,8 +16,12 @@ const int randomLettersWeight = 20;
 const int randomDigitsWeight  = 2;
 
 // ---------------- TEKST ----------------
-const char textMessage[] = "pa3efr ";
+const char textMessage[] = "pa3efr";
 int textIndex = 0;
+
+// MESSAGE sequence "rudurudur"
+const char messageSeq[] = "rudurudur ";
+bool messagePlayedAtStart = false; // is de start-MESSAGE al geweest?
 
 // ---------------- CIJFER COOLDOWN ----------------
 int lettersUntilNextDigit = 0;
@@ -74,6 +78,19 @@ unsigned long idleLastStep = 0;
 int idleIndex = 0;
 int idleCycleCount = 0;
 int fixedIdleLetter = 0;
+
+// ======================================================
+// HULP: MESSAGE automatisch spelen (ca. 2 s totaal)
+// ======================================================
+void playMessage() {
+  for (int i = 0; messageSeq[i] != '\0'; i++) {
+    char c = messageSeq[i];
+    if (c >= 'a' && c <= 'z') {
+      showLetter(c - 'a');
+      delay(200); // 0,2 s per letter -> 9 letters ~1,8 s
+    }
+  }
+}
 
 // ======================================================
 // SETUP
@@ -222,14 +239,35 @@ void handleIdle() {
 }
 
 // ======================================================
-// TEKST MODUS (LETTERS + CIJFERS)
+// TEKST MODUS (LETTERS + CIJFERS + MESSAGE)
 // ======================================================
 void textStep() {
+
+  // 1) Eerste druk in TEKST: MESSAGE automatisch afspelen
+  if (!messagePlayedAtStart) {
+    playMessage();          // ca. 2 s automatisch
+    messagePlayedAtStart = true;
+    textIndex = 0;          // daarna vanaf begin van TEKST
+  }
+
+  // 2) Daarna per druk de volgende letter/cijfer uit TEKST
   char c = textMessage[textIndex++];
 
+  // einde van de TEKST?
   if (c == '\0') {
+    // terugzetten voor de volgende sessie
     textIndex = 0;
-    c = textMessage[textIndex++];
+    messagePlayedAtStart = false; // zodat een volgende druk weer met MESSAGE begint
+
+    // nu de afsluitende MESSAGE automatisch spelen
+    playMessage();
+    
+    // Na MESSAGE: alle LEDs uit
+    for (int i = 0; i < 7; i++) {
+      digitalWrite(ledPins[i], LOW);
+    }
+    
+    return;
   }
 
   // spatie = pauze
