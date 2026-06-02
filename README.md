@@ -151,11 +151,35 @@ Wanneer de knop **15 seconden niet wordt ingedrukt**, gaat het systeem automatis
 
 Idle‑modus bestaat uit **drie fases**:
 
-1. **Testsequentie** (zoals startup test)
-2. **Snelle random letters** (alleen letters, geen cijfers)
-3. **Vaststaande letter** (5 seconden)
+1. **Testsequentie** (10 seconden)
+   * Speelt dezelfde testsequentie als bij het opstarten
+   * Elke letter wordt 80 ms weergegeven
 
-Na meerdere cycli begint de idle‑modus opnieuw bij de testsequentie.
+2. **Snelle tekst "PA3EFR ECHT WEL GAAF"** (2 seconden)
+   * Toont letters in vaste volgorde: **P‑A‑3‑E‑F‑R‑E‑C‑H‑T‑W‑E‑L‑G‑A‑A‑F**
+   * Elke stap wordt slechts 10 ms weergegeven (versneld)
+   * Het cijfer 3 wordt weergegeven als een volledig cijferpatroon:
+     `startDigits → 3 → endDigits` (150 ms totaal)
+   * Spaties tussen woorden worden overgeslagen
+   * Na afloop herhaalt de tekst automatisch
+
+3. **Vaststaande letter** (5 seconden)
+   * Toont één willekeurige letter
+   * Blijft 5 seconden staan
+
+Na **7 cycli** van fase 2 en 3 wordt de idle‑modus gereset en begint weer bij fase 1.
+
+#### Visualisatie idle‑modus
+
+```
+Fase 1: Testsequentie (10s)  →  abcdefgfedcba...
+         ↓
+Fase 2: "PA3EFR ECHT WEL GAAF" (2s)  →  P-A-3-E-F-R-E-C-H-T-W-E-L-G-A-A-F
+         ↓
+Fase 3: Vaste letter (5s)  →  [willekeurige letter]
+         ↓
+    (herhaal fase 2-3, max 7x, dan terug naar fase 1)
+```
 
 * Zodra de knop wordt ingedrukt:
 
@@ -188,7 +212,12 @@ const int randomDigitsWeight  = 2;
 int lettersUntilNextDigit = 5;
 ```
 
-* Tekstinhoud
+```cpp
+const char idleFastSequence[] = "PA3EFR ECHT WEL GAAF";
+```
+
+* Tekstinhoud (`textMessage`)
+* Idle‑sneltekst (`idleFastSequence`)
 * Idle‑gedrag
 * Willekeur‑balans
 * Alfabet‑mapping (`letters[][7]`)
