@@ -15,3 +15,6 @@ Voorbeeld - vertragen naar ~100ms per teken:
        if (now - idleLastStep >= 100) {
 
 Dit verandert niets aan de tekst zelf (zoals PA#EFRECHTWELGAAF) - alleen de snelheid. De # wordt nog steeds correct behandeld als cijferpatroon.
+
+=============
+Programmeren met Arduion board UNO, poort nummer via Windows Apparaatbeheer/Devices
