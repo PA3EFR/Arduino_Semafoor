@@ -1,0 +1,17 @@
+De variabele die je moet verhogen om de snelle idle-sequence te vertragen is de interval tussen letters in de IDLE_RANDOM_FAST case.
+
+Huidige code (regel 252):
+       if (now - idleLastStep >= 10) { 
+
+Wat je moet aanpassen:
+
+Waarde	Snelheid
+10	    Heel snel (huidig)
+50	    Langzaam
+100	    Zeer langzaam
+200	    Test-snelheid (zoals startup test)
+
+Voorbeeld - vertragen naar ~100ms per teken:
+       if (now - idleLastStep >= 100) {
+
+Dit verandert niets aan de tekst zelf (zoals PA#EFRECHTWELGAAF) - alleen de snelheid. De # wordt nog steeds correct behandeld als cijferpatroon.
