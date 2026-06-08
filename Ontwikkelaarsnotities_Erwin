@@ -18,3 +18,9 @@ Dit verandert niets aan de tekst zelf (zoals PA#EFRECHTWELGAAF) - alleen de snel
 
 =============
 Programmeren met Arduion board UNO, poort nummer via Windows Apparaatbeheer/Devices
+
+
+=============
+Verschil script_pa3efr_idle.txt en script_random_idle.txt 
+
+Bij de eerste zit een bericht verborgen in de idle sequence
